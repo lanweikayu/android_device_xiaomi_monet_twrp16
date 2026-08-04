@@ -1,0 +1,65 @@
+#
+# Copyright (C) 2025 The TeamWin Recovery Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+import /init.recovery.qcom_decrypt.rc
+
+on init
+    # double-tap wake for fts_ts touchscreen
+    write /sys/touchpanel/double_tap 1
+
+on fs
+    wait /dev/block/platform/soc/${ro.boot.bootdevice}
+    symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
+
+# In fastbootd mode TWRP skips Setup_Fstab_Partitions, so /data is never
+# marked as storage and the empty default storage path ("/") makes
+# SetBackupFolder() fail with "Unable to locate storage device." on the
+# fastboot page. settings_gen pre-seeds a persist settings file with a
+# valid storage path (InfoManager binary format). mkbootfs drops dotfiles,
+# so the file is generated at boot instead of being shipped in the ramdisk.
+    exec u:r:recovery:s0 -- /system/bin/settings_gen
+
+# TWRP's own logical-partition mapping (Setup_Super_Devices) does not work
+# at boot, so /vendor and /odm cannot be mounted when TWRP tries to read
+# their build properties ("Failed to mount ... (Invalid argument)").
+# create_lp maps all logical partitions up front from the super metadata
+# so those early mounts succeed.
+    exec u:r:recovery:s0 -- /system/bin/create_lp
+
+# fastbootd sets sys.usb.ffs.ready itself after it opens the functionfs
+# control endpoint and writes the descriptors (usb_client.cpp). Do NOT set
+# it early: binding ffs.fastboot before fastbootd is ready leaves the USB
+# device without a working function and the host never enumerates it.
+# TWRP's enablefastboot action already switches sys.usb.config none -> fastboot,
+# which detaches the UDC (re-enumeration) and lets fastbootd drive the rest.
+
+# QTI AIDL vibrator HAL (aw8624 haptic) - started explicitly, no class hal
+# in recovery. The device tree ships the service binary + impl + vintf
+# fragment; TWRP's USE_QTI_AIDL_HAPTICS path calls IVibrator/default.
+service vendor.qti.vibrator /vendor/bin/hw/vendor.qti.hardware.vibrator.service
+    user system
+    group system input
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+# fastbootd blocks forever in get_health_service() -> HIDL
+# android.hardware.health@2.0::IHealth::getService() while the health HAL
+# (declared in the vintf manifest, service class hal) is not running, so it
+# never opens the functionfs endpoints and the host never enumerates it.
+# Start the health HAL explicitly once hwservicemanager is up.
+service health-hal-2-1 /system/bin/android.hardware.health@2.1-service
+    user root
+    group root
+    capabilities WAKE_ALARM
+    file /dev/kmsg w
+    disabled
+    oneshot
+    seclabel u:r:recovery:s0
+
+on property:init.svc.hwservicemanager=running
+    start vendor.qti.vibrator
+    start health-hal-2-1

@@ -1,0 +1,5 @@
+cc_binary {
+    name: "settings_gen",
+    srcs: ["settings_gen.c"],
+    cflags: ["-O2"],
+}
