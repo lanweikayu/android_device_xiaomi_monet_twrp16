@@ -29,12 +29,16 @@
 # Image flashing of logical partitions is done through the /super partition
 # (TWRP's Flash_Image rejects file-system partitions), so no flashimg flag
 # is added here - the "Install Image" target picker offers the Super image.
-# "ro" is intentionally dropped so TWRP can mount them read-write.
-/dev/block/mapper/system                               /system_root           ext4    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/system_ext                           /system_ext            ext4    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/product                              /product               ext4    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/vendor                               /vendor                ext4    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/odm                                  /odm                   ext4    barrier=1,discard                                                                                     wait,backup=1,logical
+# "ro" is intentionally dropped so TWRP can mount them read-write (ext4) or
+# read-only (erofs, inherently).  The fs type is declared as erofs for the
+# upcoming erofs-packaged logical partitions; TWRP's blkid re-detects the
+# real on-disk type (erofs.c is compiled in), so the current ext4 images
+# keep mounting normally.
+/dev/block/mapper/system                               /system_root           erofs    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/system_ext                           /system_ext            erofs    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/product                              /product               erofs    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/vendor                               /vendor                erofs    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/odm                                  /odm                   erofs    barrier=1,discard                                                                                     wait,backup=1,logical
 
 # FBE metadata
 /dev/block/bootdevice/by-name/metadata                  /metadata              ext4    noatime,nosuid,nodev,discard                                                                           wait,check,formattable
