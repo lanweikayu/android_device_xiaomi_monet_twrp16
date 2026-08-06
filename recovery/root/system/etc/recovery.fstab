@@ -4,22 +4,37 @@
 # TWRP fstab for xiaomi monet (lito)
 # Sources verified against the running device /vendor/etc/fstab.qcom
 #
-# Logical partitions are referenced by their device-mapper paths
-# (/dev/block/mapper/*) instead of the "logical" flag: TWRP's
-# Prepare_Super_Volume path fails on this device (dm devices are only
-# mapped later, during FBE metadata decryption), which previously caused
-# the partitions to be dropped from the list.
+# Logical partitions use their device-mapper paths (/dev/block/mapper/*)
+# together with the "logical" flag (see the section below for why this is
+# safe on monet).  create_lp maps the dm devices in init.recovery.qcom.rc
+# before TWRP starts, so TWRP's super-partition handling finds them.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
 #<src>                                                 <mnt_point>            <type>  <mnt_flags and options>                                                                                  <fs_mgr_flags>
 
 # Logical partitions (dynamic, mapped to dm devices after metadata decrypt)
-/dev/block/mapper/system                               /system_root           ext4    ro,barrier=1,discard                                                                                   wait,backup=1
-/dev/block/mapper/system_ext                           /system_ext            ext4    ro,barrier=1,discard                                                                                   wait,backup=1
-/dev/block/mapper/product                              /product               ext4    ro,barrier=1,discard                                                                                   wait,backup=1
-/dev/block/mapper/vendor                               /vendor                ext4    ro,barrier=1,discard                                                                                   wait,backup=1
-/dev/block/mapper/odm                                  /odm                   ext4    ro,barrier=1,discard                                                                                   wait,backup=1
+#
+# Unlike the original design (plain /dev/block/mapper/* entries with no
+# logical flag), these entries carry the TWRP "logical" flag.  create_lp
+# (init.recovery.qcom.rc, "on fs") maps all logical partitions from the
+# super metadata BEFORE TWRP's GUI starts, so Prepare_Super_Volume's
+# fs_mgr_update_logical_partition()/GetDmDevicePathByName() find the
+# already-existing /dev/block/dm-N devices and never block or fail.  This
+# makes TWRP treat them as super sub-partitions:
+#   - the "Super (...)" display name lists the logical partitions,
+#   - restores of those backups resolve correctly,
+#   - the partitions can no longer be backed up individually (they are
+#     backed up together with the /super image instead).
+# Image flashing of logical partitions is done through the /super partition
+# (TWRP's Flash_Image rejects file-system partitions), so no flashimg flag
+# is added here - the "Install Image" target picker offers the Super image.
+# "ro" is intentionally dropped so TWRP can mount them read-write.
+/dev/block/mapper/system                               /system_root           ext4    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/system_ext                           /system_ext            ext4    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/product                              /product               ext4    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/vendor                               /vendor                ext4    barrier=1,discard                                                                                     wait,backup=1,logical
+/dev/block/mapper/odm                                  /odm                   ext4    barrier=1,discard                                                                                     wait,backup=1,logical
 
 # FBE metadata
 /dev/block/bootdevice/by-name/metadata                  /metadata              ext4    noatime,nosuid,nodev,discard                                                                           wait,check,formattable
