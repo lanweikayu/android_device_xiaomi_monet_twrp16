@@ -51,8 +51,17 @@
 /dev/block/bootdevice/by-name/cache                     /cache                 ext4    nosuid,noatime,nodev,barrier=1                                                                         wait,backup=1
 
 # Image partitions (flash + image backup)
+# dtbo and all five vbmeta partitions carry the "flashimg" flag so they show
+# up in the "Install Image" target picker (TWRP's stock code only enables
+# Can_Flash_Img for boot/init_boot/recovery/system_image/vendor_image; these
+# are emmc image partitions with Backup_Method dd, so flashing works out of
+# the box) and "backup" so they can be backed up individually.
 /dev/block/bootdevice/by-name/boot                      /boot                  emmc    defaults                                                                                               defaults,backup=1
 /dev/block/bootdevice/by-name/recovery                  /recovery              emmc    defaults                                                                                               defaults
-/dev/block/bootdevice/by-name/dtbo                      /dtbo                  emmc    defaults                                                                                               defaults,backup=1
-/dev/block/bootdevice/by-name/vbmeta                    /vbmeta                emmc    defaults                                                                                               defaults,backup=1
+/dev/block/bootdevice/by-name/dtbo                      /dtbo                  emmc    defaults                                                                                               defaults,backup=1,flashimg
+/dev/block/bootdevice/by-name/vbmeta                    /vbmeta                emmc    defaults                                                                                               defaults,backup=1,flashimg
+/dev/block/bootdevice/by-name/vbmeta_system             /vbmeta_system         emmc    defaults                                                                                               defaults,backup=1,flashimg
+/dev/block/bootdevice/by-name/vbmeta_vendor             /vbmeta_vendor         emmc    defaults                                                                                               defaults,backup=1,flashimg
+/dev/block/bootdevice/by-name/vbmeta_odm                /vbmeta_odm            emmc    defaults                                                                                               defaults,backup=1,flashimg
+/dev/block/bootdevice/by-name/vbmeta_product            /vbmeta_product        emmc    defaults                                                                                               defaults,backup=1,flashimg
 /dev/block/bootdevice/by-name/misc                      /misc                  emmc    defaults                                                                                               defaults
