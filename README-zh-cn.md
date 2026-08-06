@@ -107,7 +107,7 @@ device/xiaomi/monet/
 
 ```bash
 source build/envsetup.sh
-lunch twrp_monet-bp2a-eng
+lunch twrp_monet bp2a eng
 mka recovery recoveryimage
 ```
 
@@ -121,7 +121,9 @@ fastboot flash recovery out/target/product/monet/recovery.img
 fastboot boot out/target/product/monet/recovery.img
 ```
 
-Bootloader 已解锁，无需 AVB 重新签名。
+recovery.img 已内置 AVB hash footer，并使用本机 ABL 信任的 AOSP
+4096 位测试密钥自签名，因此直接刷入 recovery 分区即可启动，无需
+额外 AVB 重新签名。
 
 ## 注意事项 / 已知限制
 

@@ -116,7 +116,7 @@ device/xiaomi/monet/
 
 ```bash
 source build/envsetup.sh
-lunch twrp_monet-bp2a-eng
+lunch twrp_monet bp2a eng
 mka recovery recoveryimage
 ```
 
@@ -130,7 +130,10 @@ fastboot flash recovery out/target/product/monet/recovery.img
 fastboot boot out/target/product/monet/recovery.img
 ```
 
-The bootloader is unlocked, so no AVB re-signing is required.
+The recovery image carries an AVB hash footer self-signed with the AOSP
+4096-bit test key, which is the key the stock ABL trusts on this device,
+so the flashed recovery partition boots directly without extra AVB
+re-signing.
 
 ## Notes / limitations
 
