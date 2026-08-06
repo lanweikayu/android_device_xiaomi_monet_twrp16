@@ -34,11 +34,14 @@
 # upcoming erofs-packaged logical partitions; TWRP's blkid re-detects the
 # real on-disk type (erofs.c is compiled in), so the current ext4 images
 # keep mounting normally.
-/dev/block/mapper/system                               /system_root           erofs    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/system_ext                           /system_ext            erofs    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/product                              /product               erofs    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/vendor                               /vendor                erofs    barrier=1,discard                                                                                     wait,backup=1,logical
-/dev/block/mapper/odm                                  /odm                   erofs    barrier=1,discard                                                                                     wait,backup=1,logical
+# Mount options are "defaults": erofs rejects barrier=/discard (EINVAL), so
+# passing them would force TWRP's fallback (mount with NULL options) on every
+# mount.  "defaults" mounts cleanly on both ext4 and erofs.
+/dev/block/mapper/system                               /system_root           erofs    defaults                                                                                               wait,backup=1,logical
+/dev/block/mapper/system_ext                           /system_ext            erofs    defaults                                                                                               wait,backup=1,logical
+/dev/block/mapper/product                              /product               erofs    defaults                                                                                               wait,backup=1,logical
+/dev/block/mapper/vendor                               /vendor                erofs    defaults                                                                                               wait,backup=1,logical
+/dev/block/mapper/odm                                  /odm                   erofs    defaults                                                                                               wait,backup=1,logical
 
 # FBE metadata
 /dev/block/bootdevice/by-name/metadata                  /metadata              ext4    noatime,nosuid,nodev,discard                                                                           wait,check,formattable
