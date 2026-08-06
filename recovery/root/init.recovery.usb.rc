@@ -37,12 +37,29 @@ on post-fs && property:ro.boot.recover_usb=*
 on post-fs && property:sys.usb.configfs=1
     wait /config/usb_gadget/g1/configs/b.1/strings/0x409
     write /config/usb_gadget/g1/bcdUSB 0x0200
-    mkdir /config/usb_gadget/g1/functions/mtp.gs0
+    # Use ffs.mtp (FunctionFS) instead of mtp.gs0 (in-kernel f_mtp driver).
+    # The kernel f_mtp driver misbehaves when the host enumerates directories
+    # containing files larger than 4 GiB: the client-side MTP stack crashes.
+    # TWRP's MTP server (twrpMtp / MtpFfsHandle) supports FunctionFS; mounting
+    # functionfs at /dev/usb-ffs/mtp makes mtp_MtpServer.cpp take the FFS path
+    # and avoids the problematic /dev/mtp_usb node entirely.
+    mkdir /config/usb_gadget/g1/functions/ffs.mtp
     mkdir /config/usb_gadget/g1/functions/mass_storage.0
     write /config/usb_gadget/g1/os_desc/use 1
     write /config/usb_gadget/g1/os_desc/b_vendor_code 0x1
     write /config/usb_gadget/g1/os_desc/qw_sign "MSFT100"
     symlink /config/usb_gadget/g1/configs/b.1 /config/usb_gadget/g1/os_desc/b.1
+
+# Mount FunctionFS for MTP before the MTP server starts.
+# Use root:root (uid=0,gid=0) because TWRP's recovery process runs as root.
+# no_disconnect=1 keeps the gadget bound when the host resets the USB link,
+# which matches Android's init.qcom.usb.rc behaviour.
+on post-fs
+    mkdir /dev/usb-ffs 0755 shell shell
+    mkdir /dev/usb-ffs/mtp 0770 root root
+    mount functionfs mtp /dev/usb-ffs/mtp rmode=0770,fmode=0660,uid=0,gid=0,no_disconnect=1
+    chown root root /dev/usb-ffs/mtp
+    chmod 0770 /dev/usb-ffs/mtp
 
 on property:sys.usb.config=none && property:sys.usb.configfs=1
     setprop sys.usb.ffs.mtp.ready 0
@@ -52,17 +69,20 @@ on property:sys.usb.config=none && property:sys.usb.configfs=1
 on property:sys.usb.config=mtp && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/idProduct 0x2D07
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
-    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
     write /config/usb_gadget/g1/UDC ${sys.usb.controller}
     setprop sys.usb.state ${sys.usb.config}
 
 on property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
     start adbd
 
-on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
+# Bind the UDC only after both adb's ffs and MTP's ffs have written their
+# descriptors.  Binding earlier makes the dwc3 gadget start fail (-ENODEV)
+# because ffs.mtp has no descriptors yet, which tears the USB link down.
+on property:sys.usb.ffs.ready=1 && property:sys.usb.ffs.mtp.ready=1 && property:sys.usb.config=mtp,adb && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/idProduct 0x2D08
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
-    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
     symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
     write /config/usb_gadget/g1/UDC ${sys.usb.controller}
     setprop sys.usb.state ${sys.usb.config}
