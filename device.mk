@@ -19,7 +19,8 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 # Tools built from source and relinked into the recovery ramdisk
 PRODUCT_PACKAGES += \
     settings_gen \
-    create_lp
+    create_lp \
+    libtwrpmtp-ffs-fixed
 
 # NOTE: recovery/root is picked up automatically by the build system via
 # recovery_root_private ($(TARGET_DEVICE_DIR)/recovery/root), copied into the

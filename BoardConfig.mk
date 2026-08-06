@@ -175,3 +175,18 @@ TW_RECOVERY_ADDITIONAL_RELINK_LIBRARY_FILES += \
 RECOVERY_BINARY_SOURCE_FILES += \
     $(TARGET_OUT_EXECUTABLES)/settings_gen \
     $(TARGET_OUT_EXECUTABLES)/create_lp
+
+# MTP fix: the stock bootable/recovery/mtp/ffs/Android.mk module
+# libtwrpmtp-ffs sends DATE_MODIFIED/DATE_ADDED as UINT64 in the batch
+# ObjectPropertyList reply, which makes libmtp/GVFS on the host crash when a
+# directory with >4 GiB files is opened.  The fixed library is compiled from
+# build/twrpmtp-ffs/Android.bp (module libtwrpmtp-ffs-fixed) and relinked into
+# the ramdisk like any other recovery lib; BOARD_RECOVERY_IMAGE_PREPARE (runs
+# after the ramdisk is assembled) then overwrites the unpatched
+# libtwrpmtp-ffs.so with the fixed build.  bootable/recovery is untouched.
+TW_RECOVERY_ADDITIONAL_RELINK_LIBRARY_FILES += \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libtwrpmtp-ffs-fixed.so
+
+BOARD_RECOVERY_IMAGE_PREPARE += \
+    cp -f $(TARGET_RECOVERY_ROOT_OUT)/system/lib64/libtwrpmtp-ffs-fixed.so $(TARGET_RECOVERY_ROOT_OUT)/system/lib64/libtwrpmtp-ffs.so; \
+    cp -f $(TARGET_RECOVERY_ROOT_OUT)/system/lib/libtwrpmtp-ffs-fixed.so $(TARGET_RECOVERY_ROOT_OUT)/system/lib/libtwrpmtp-ffs.so || true;

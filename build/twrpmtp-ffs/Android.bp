@@ -1,0 +1,99 @@
+//
+// Copyright (C) 2025 The TeamWin Recovery Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//
+// TWRP MTP stack (libtwrpmtp-ffs) built from source inside the device tree.
+//
+// WHY: the stock bootable/recovery/mtp/ffs implementation sends the MTP
+// date properties DATE_MODIFIED / DATE_ADDED as UINT64 in the batch
+// GET_OBJECT_PROP_LIST (ObjectPropertyList) response, while the MTP spec
+// (and therefore libmtp / GVFS on the host) expects them as STRING.  Hosts
+// that hard-code those properties as STRING strlen() the raw 8-byte integer
+// and crash, which on monet made the PC-side MTP client drop the connection
+// whenever a directory containing files > 4 GiB was opened.
+//
+// MtpStorage.cpp in this directory carries the fix (see getObjectPropertyList):
+//   - the wire datatype for DATE_MODIFIED/DATE_ADDED is forced to MTP_TYPE_STR
+//   - the value is formatted via formatDateTime() like the single-property
+//     path (IMtpDatabase::getObjectPropertyValue) already does.
+//
+// The Soong module below intentionally shadows the same-named module from
+// bootable/recovery/mtp/ffs/Android.mk (Android.bp is loaded first), so the
+// recovery ramdisk picks up the fixed library instead of the unpatched one.
+// bootable/recovery sources are left untouched.
+
+cc_library_shared {
+    name: "libtwrpmtp-ffs-fixed",
+    vendor_available: false,
+    product_available: false,
+    recovery_available: true,
+    srcs: [
+        "MtpDataPacket.cpp",
+        "MtpDebug.cpp",
+        "MtpDevice.cpp",
+        "MtpDevHandle.cpp",
+        "MtpDeviceInfo.cpp",
+        "MtpEventPacket.cpp",
+        "MtpObjectInfo.cpp",
+        "MtpPacket.cpp",
+        "MtpProperty.cpp",
+        "MtpRequestPacket.cpp",
+        "MtpResponsePacket.cpp",
+        "MtpServer.cpp",
+        "MtpStorage.cpp",
+        "MtpStorageInfo.cpp",
+        "MtpStringBuffer.cpp",
+        "MtpUtils.cpp",
+        "mtp_MtpServer.cpp",
+        "btree.cpp",
+        "twrpMtp.cpp",
+        "mtp_MtpDatabase.cpp",
+        "node.cpp",
+        "MtpDescriptors.cpp",
+        "MtpFfsHandle.cpp",
+        "MtpFfsCompatHandle.cpp",
+        "PosixAsyncIO.cpp",
+    ],
+    cflags: [
+        "-D_FILE_OFFSET_BITS=64",
+        "-DMTP_DEVICE",
+        "-DMTP_HOST",
+        "-D_FFS_DEVICE",
+        "-DHAS_USBHOST_TIMEOUT",
+        "-fno-strict-aliasing",
+        "-Wno-unused-variable",
+        "-Wno-format",
+        "-Wno-unused-parameter",
+        "-Wno-unused-private-field",
+        "-Wno-implicit-fallthrough",
+    ],
+    local_include_dirs: [
+        ".",
+    ],
+    include_dirs: [
+        "bionic",
+        "system/core/include",
+        "bionic/libc/private",
+        "bootable/recovery/twrpinstall/include",
+        "system/core/libasyncio/include",
+    ],
+    static_libs: [
+        "libtwrpinstall",
+    ],
+    shared_libs: [
+        "libasyncio",
+        "libc++",
+        "libz",
+        "libc",
+        "libusbhost",
+        "libstdc++",
+        "libdl",
+        "libcutils",
+        "libutils",
+        "libselinux",
+        "libbase",
+        "liblog",
+    ],
+}
