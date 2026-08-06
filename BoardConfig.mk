@@ -33,6 +33,25 @@ TARGET_NO_BOOTLOADER := true
 TARGET_BOARD_PLATFORM := lito
 BOARD_USES_QCOM_HARDWARE := true
 
+# monet is A-only (non-A/B): boot and recovery are separate partitions and
+# there are no boot_* / recovery_* slots.  The AOSP build default is
+# AB_OTA_UPDATER=true, which makes TWRP expose the "Slot A/B" and "Flash to
+# both slots" entries and report ro.build.ab_update=true in recovery.
+AB_OTA_UPDATER := false
+
+# AVB: the stock ABL verifies the recovery partition with AVB and expects a
+# hash footer.  The device's vendor recovery image is signed with the AOSP
+# 4096-bit test key (public key sha1 2597c218aae470a130f61162feaae70afd97f011),
+# so recovery must be self-signed with the same key for a flashed image to
+# boot from the recovery partition.
+BOARD_AVB_ENABLE := true
+BOARD_AVB_ALGORITHM := SHA256_RSA4096
+BOARD_AVB_KEY_PATH := external/avb/test/data/testkey_rsa4096.pem
+BOARD_AVB_RECOVERY_KEY_PATH := $(BOARD_AVB_KEY_PATH)
+BOARD_AVB_RECOVERY_ALGORITHM := $(BOARD_AVB_ALGORITHM)
+BOARD_AVB_RECOVERY_ROLLBACK_INDEX := 0
+BOARD_AVB_RECOVERY_ROLLBACK_INDEX_LOCATION := 0
+
 # Partition layout: real vendor partition layout (not system/vendor).
 # With TARGET_COPY_OUT_VENDOR := vendor, BOARD_USES_VENDORIMAGE becomes true and
 # the baseline root fileset materializes /vendor as a real directory instead of
