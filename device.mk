@@ -20,6 +20,7 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 PRODUCT_PACKAGES += \
     settings_gen \
     create_lp \
+    avb_disable \
     libtwrpmtp-ffs-fixed
 
 # NOTE: recovery/root is picked up automatically by the build system via

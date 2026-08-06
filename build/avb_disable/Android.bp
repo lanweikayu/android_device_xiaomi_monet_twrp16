@@ -1,0 +1,6 @@
+cc_binary {
+    name: "avb_disable",
+    srcs: ["avb_disable.c"],
+    cflags: ["-O2"],
+    shared_libs: ["libcrypto"],
+}
